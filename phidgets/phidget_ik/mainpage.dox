@@ -1,0 +1,36 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b phidget_ik extends phidgetspp to the PhidgetInterfaceKit.
+
+\section note Important notice
+
+The current version (as of 12-7-2011) of phidgetspp uses a deprecated build system. You will need to edit its CMakeLists.txt before building. See the <a href="http://code.google.com/p/foote-ros-pkg/issues/detail?id=25">issue</a>. Additionally, due to a certificate problem it is currently better to directly checkout the phidgets stack instead of using rosinstall. Use:
+
+<tt>hg clone https://code.google.com/p/foote-ros-pkg.phidget/</tt>
+
+Furthermore, be sure to follow the instructions in <tt>phidgetspp_c_api/build/Phidgetlinux/README</tt> such that the driver is loaded properly.
+
+<!-- 
+Provide an overview of your package.
+-->
+
+
+\section codeapi Code API
+
+Only one class is defined, PhidgetIK. This implements the Phidget class and additional functions for the PhidgetInterfaceKit
+
+<!--
+Provide links to specific auto-generated API documentation within your
+package that is of particular interest to a reader. Doxygen will
+document pretty much every part of your code, so do your best here to
+point the reader to the actual API.
+
+If your codebase is fairly large or has different sets of APIs, you
+should use the doxygen 'group' tag to keep these APIs together. For
+example, the roscpp documentation has 'libros' group.
+-->
+
+
+*/

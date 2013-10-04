@@ -1,0 +1,59 @@
+Phidgets for Linux
+Version 2.1.5
+October 16, 2008
+--------------------------------------------------------------------------
+Installation:
+There is a makefile. run 'make', then 'sudo make install'
+The libphidget.so library is installed into /usr/lib
+The header phidget21.h is installed into /urs/include
+
+Note: USB devices are by default only usable by root in Linux.
+      Install udev/hotplug scripts to use Phidgets from a normal user account (see below).
+
+If you want Java JNI support run 'make jni' instead of 'make' and it will be added to the libphidget21.so
+you might have to modify the makefile to point to your JavaSDK installation.
+
+The static version of the library can be built with 'make libphidget21.a'
+
+The Phidget WebService can be found in the phidgetwebservice directory and has its own makefile.
+--------------------------------------------------------------------------
+Usage:
+simply compile your projects with -lphidget21 and include phidget21.h
+--------------------------------------------------------------------------
+Hotplug / udev:
+
+On linux, by default, USB devices are not writeable by anybody but root.
+
+On modern systems (kernel > 2.6.7), this is solved with a udev ruleset. This is the ideal solution.
+
+On older systems, this can be solved with a hotplug script.
+------------------------------------
+udev:
+
+The udev rules file will make all phidgets world writeable (mode 666) as soon as they are attached. Note that some systems may already have generic USB rulesets defined.  The udev rules are run in order from smallest to largest number - the Phidgets rules, at number 51, should be high enough so that any USB rules will be overridden.
+
+To Install:
+-copy the 51-phidgets.rules file from the udev folder to /etc/udev/rules.d
+------------------------------------
+Hotplug:
+
+A hotplug script has been included that will make phidgets writeable when the are plugged in.
+
+Because of this, there can sometimes be an issue accessing/opening a device as soon as it is plugged in, before the hotplug script has run to make it accesible. In this case you will see an error 4: "A phidget matching the type and or serial number could not be found."
+
+Never rely on the hotplug scripts it you're using the phidget manager to open
+or access devices as soon as they appear as this will sometimes fail.
+
+To Install: 
+-copy phidgets and phidgets.usermap from the hotplug folder to /etc/hotplug/usb
+-chmod 755 phidgets
+--------------------------------------------------------------------------
+Examples:
+There are two examples in the examples directory. manager is just a simple program that will list all phidgets attached to the system, as they are plugged in or removed. ifkit connects to an interface kit and displays changes, while setting outputs.
+
+There is also a seperate download avialable with C examples for most phidgets, on the phdigets.com website.
+--------------------------------------------------------------------------
+Phidget WebService:
+The Phidget Webservice can be built after phidget21 has been built and installed.
+
+Run phidgetwebservice21 -h for runtime options.

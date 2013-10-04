@@ -1,0 +1,21 @@
+<package>
+  <description brief="phidget_ik">
+
+     phidget_ik extends phidgetspp to the PhidgetInterfaceKit.
+
+  </description>
+  <author>Wouter Caarls</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/phidget_ik</url>
+  <depend package="phidgetspp"/>
+  <depend package="std_msgs"/>
+  <depend package="rospy"/>
+  <depend package="roscpp"/>
+
+  <export>
+    <cpp cflags="-I${prefix}/include"/>
+    <rosdoc config="rosdoc.yaml" />
+  </export>
+        
+</package>

@@ -1,0 +1,40 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/pc_willem/ros/dbl-ros-pkg-dev/drivers/phidgets/phidget_text/mykit.cc
+stdio.h
+-
+string.h
+-
+unistd.h
+-
+signal.h
+-
+time.h
+-
+iostream
+-
+sstream
+-
+phidgetspp.hh
+-
+
+/home/pc_willem/ros/dbl-ros-pkg-dev/drivers/phidgets/phidgetspp/include/phidgetspp.hh
+phidget21.h
+-
+iostream
+-
+algorithm
+-
+string
+-
+cstring
+-
+
+/home/pc_willem/ros/dbl-ros-pkg-dev/drivers/phidgets/phidgetspp_c_api/include/phidget21.h
+

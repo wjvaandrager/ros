@@ -1,0 +1,13 @@
+<launch>
+<arg name="model" default="gripper.urdf" />
+<arg name="gui" default="False" />
+<param name="robot_description" textfile="$(arg model)" />
+<param name="use_gui" value="$(arg gui)"/>
+<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" ></node>
+<node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+     <param name="joint_states" value="/joint_states"/> 
+<node name="dxl_ros_gripper" pkg="threemxl" type="gripper" />
+<node name="sensor" pkg="phidget_ik" type="sensor" />
+<node name="listener" pkg="using_markers" type="listener" />
+<node name="rviz" pkg="rviz" type="rviz" args="-d $(find urdfw)/urdf.vcg" />
+</launch>

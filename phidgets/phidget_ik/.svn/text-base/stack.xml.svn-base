@@ -1,0 +1,10 @@
+<stack>
+  <description brief="phidget_ik">Phidget InterfaceKit</description>
+  <author>Wouter Caarls</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/phidget_ik</url>
+  <depend stack="ros" />
+  <depend stack="phidgets" />
+
+</stack>

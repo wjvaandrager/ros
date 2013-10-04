@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../include/phidgetspp.hh
+phidget21.h
+-
+iostream
+-
+algorithm
+-
+string
+-
+cstring
+-
+
+/home/pc_willem/ros/dbl-ros-pkg-dev/drivers/phidgets/phidgetspp/src/rfid_demo.cc
+unistd.h
+-
+stdio.h
+-
+iostream
+-
+phidgetspp.hh
+-
+
+/home/pc_willem/ros/dbl-ros-pkg-dev/drivers/phidgets/phidgetspp_c_api/include/phidget21.h
+

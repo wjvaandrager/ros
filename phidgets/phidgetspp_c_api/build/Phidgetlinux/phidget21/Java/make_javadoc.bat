@@ -1,0 +1,1 @@
+javadoc -overview com\phidgets\overview.html -public -quiet -version -author -d phidget21jni_javadoc com.phidgets com.phidgets.event

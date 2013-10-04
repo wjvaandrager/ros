@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/dbl-ros-pkg/!svn/ver/1033/trunk/drivers/phidget_ik
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/dbl-ros-pkg/!svn/ver/17/trunk/drivers/phidget_ik/CMakeLists.txt
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/dbl-ros-pkg/!svn/ver/15/trunk/drivers/phidget_ik/Makefile
+END
+stack.xml
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/dbl-ros-pkg/!svn/ver/990/trunk/drivers/phidget_ik/stack.xml
+END
+manifest.xml
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/dbl-ros-pkg/!svn/ver/841/trunk/drivers/phidget_ik/manifest.xml
+END
+mainpage.dox
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/dbl-ros-pkg/!svn/ver/1033/trunk/drivers/phidget_ik/mainpage.dox
+END

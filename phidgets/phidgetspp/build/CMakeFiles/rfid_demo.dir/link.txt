@@ -1,0 +1,1 @@
+/usr/bin/c++   -O2 -g     -pthread CMakeFiles/rfid_demo.dir/src/rfid_demo.o  -o ../rfid_demo -rdynamic -L/home/pc_willem/ros/dbl-ros-pkg-dev/drivers/phidgets/phidgetspp_c_api/lib -lphidget21 -lpthread -ldl -Wl,-rpath,/home/pc_willem/ros/dbl-ros-pkg-dev/drivers/phidgets/phidgetspp_c_api/lib 
