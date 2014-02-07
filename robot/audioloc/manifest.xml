@@ -1,0 +1,16 @@
+<package>
+  <description brief="audioloc">
+
+     audioloc
+
+  </description>
+  <author>PC_Willem</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/audioloc</url>
+  <depend package="roscpp"/>
+  <depend package="std_msgs"/>
+
+</package>
+
+

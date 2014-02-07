@@ -1,0 +1,18 @@
+<package>
+  <description brief="arduino1">
+
+     arduino1
+
+  </description>
+  <author>PC_Willem</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/arduino1</url>
+  <depend package="std_msgs"/>
+  <depend package="rospy"/>
+  <depend package="roscpp"/>
+  <depend package="cereal_port"/>
+
+</package>
+
+

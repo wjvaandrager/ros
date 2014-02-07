@@ -1,0 +1,27 @@
+geometry_msgs/PoseWithCovarianceStamped for /initialpose
+
+pose: 
+  pose: 
+    position: 
+      x: 7.33053779602
+      y: 8.63017463684
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: 0.983119748588
+      w: 0.182963274828
+  covariance: [0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.06853891945200942]
+
+geometry_msgs/PoseStamped for /move_base_simple/goal
+
+pose: 
+  position: 
+    x: 9.45367908478
+    y: 13.743391037
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.114411240963
+    w: 0.993433474341

@@ -1,0 +1,161 @@
+#include <ros/ros.h>
+#include <threemxl/basekinect1.h>
+#include <threemxl/C3mxlROS.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Float64.h>
+#include <rosbag/bag.h>
+#include <stdlib.h> 
+#include <iostream>     // std::cout
+#include <cmath>        // std::abs
+#include <sensor_msgs/JointState.h>
+#include <sensor_msgs/LaserScan.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <boost/algorithm/string.hpp>
+#include <cstdlib>
+#define _USE_MATH_DEFINES
+
+using std::cout;
+using std::endl;
+
+void DxlROSBaseKinect1::init(double dist)
+{
+  char* path = NULL;
+  CDxlConfig *config = new CDxlConfig();
+
+  if (path)
+  {
+    ROS_INFO("Using shared_serial");
+    motor1_ = new C3mxlROS(path);
+    motor2_ = new C3mxlROS(path);
+  }
+  else
+  {
+    ROS_INFO("Using direct connection");
+    motor1_ = new C3mxl();
+    motor2_ = new C3mxl();  
+
+    serial_port_.port_open("/dev/ttyUSB0", LxSerial::RS485_FTDI);
+    serial_port_.set_speed(LxSerial::S921600);
+    motor1_->setSerialPort(&serial_port_);
+    motor2_->setSerialPort(&serial_port_);
+  }
+
+  motor1_->setConfig(config->setID(106));
+  motor1_->init(false);
+  motor2_->setConfig(config->setID(107));
+  motor2_->init(false);
+  motor1_->set3MxlMode(PWM_MODE);
+  motor2_->set3MxlMode(PWM_MODE);
+  motor1_->setPIDPosition(0.1,0,0,5);
+  motor2_->setPIDPosition(0.1,0,0,5);
+  distance = dist;
+  dis = 0;
+  delete config;
+
+  speed1_pub = n.advertise<std_msgs::Float64>("speed1", 1);
+  speed2_pub = n.advertise<std_msgs::Float64>("speed2", 1);
+  dist_pub = n.advertise<std_msgs::Float64>("distance", 1);
+
+}
+
+//published de posities en snelheden van de motor
+void DxlROSBaseKinect1::publishStates(){
+  std_msgs::Float64 s1;
+  std_msgs::Float64 s2;
+  std_msgs::Float64 d;
+  
+  motor1_->getState();
+  motor2_->getState(); 
+
+  s1.data = motor1_->presentSpeed();
+  s2.data = motor2_->presentSpeed();
+  d.data = dis;
+  speed1_pub.publish(s1);
+  speed2_pub.publish(s2);
+  dist_pub.publish(d);
+}
+
+void DxlROSBaseKinect1::kinectCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
+{
+  ls.ranges = msg->ranges;
+}
+
+
+void DxlROSBaseKinect1::ps3Callback(const std_msgs::String::ConstPtr& msg)
+{
+
+  //splitst de message op in stukken
+  std::vector<std::string> strs;
+  boost::split(strs, msg->data, boost::is_any_of("\t "));
+  //haalt de benodigde double uit de message
+  double linear = atof( strs[0].c_str() );
+  double linear2 = atof( strs[2].c_str() );
+  //stelt error van linearpos bij
+  steer(linear,linear2);
+}
+
+void DxlROSBaseKinect1::steer(double linear,double linear2){
+  double minDist = 6;
+  double speed;
+  for(int i = 6; i <= 114;i+=6){
+    if(ls.ranges[i] < minDist){
+      minDist = ls.ranges[i];
+    }
+  }
+  dis = minDist;
+  if(dis == 6) dis = 0;
+  speed = (minDist - distance);
+  if (minDist >= 6 || speed < 0){
+    speed = 0; 
+  }
+  if(speed>1){
+    speed = 1; 
+  }
+  cout <<  minDist<<" " << speed << endl;
+  if(linear <= 0 && linear2 <=0){
+    motor1_->setPWM(linear);
+    motor2_->setPWM(linear2);
+  }else if(linear <=0){
+    motor1_->setPWM(linear);
+    motor2_->setPWM(speed*linear2);
+  }else if(linear2 <=0){
+    motor1_->setPWM(speed*linear);
+    motor2_->setPWM(linear2);
+  }else{
+    motor1_->setPWM(speed*linear);
+    motor2_->setPWM(speed*linear2);
+  }
+  
+}
+
+void DxlROSBaseKinect1::spin()
+{
+  ros::Rate loop_rate(100);
+  ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("scan", 3, &DxlROSBaseKinect1::kinectCallback, this);
+  usleep(500000);
+  ros::Subscriber ps3sub = n.subscribe<std_msgs::String>("ps3", 1, &DxlROSBaseKinect1::ps3Callback, this);      
+   while(ros::ok()){
+    ros::spinOnce();
+    publishStates();
+    loop_rate.sleep();
+  }
+}
+
+int main(int argc, char **argv)
+{
+  
+  ros::init(argc, argv, "dxl_ros_basekinect1");
+  
+  double dist = 1;
+  if (argc == 2)
+    dist = std::atof(argv[1]);
+ 
+  DxlROSBaseKinect1 dxl_ros_basekinect1;
+  
+  dxl_ros_basekinect1.init(dist);
+  dxl_ros_basekinect1.spin();
+
+  return 0;   
+} 
+

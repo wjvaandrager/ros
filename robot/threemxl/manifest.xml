@@ -1,0 +1,27 @@
+<package>
+  <description brief="threemxl">
+
+     Dynamixel and 3mxl driver
+
+  </description>
+  <author>Wouter Caarls</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/threemxl</url>
+  <depend package="roscpp"/>
+  <depend package="dbl_repos"/>
+  <depend package="std_msgs"/>
+  <depend package="rospy"/>
+  <depend package="sensor_msgs"/>
+  <depend package="shared_serial"/>
+  <depend package="geometry_msgs"/>
+  <depend package="people_msgs"/>
+  <depend package="nav_msgs"/>
+  <depend package="tf"/>
+  <rosdep name="libreadline-dev"/>
+  
+  <export>
+    <cpp cflags="-I${prefix}/include -I`rospack find dbl_repos`/dbl/externals/tinyxml -I`rospack find dbl_repos`/dbl/externals/muparser/include -I`rospack find dbl_repos`/dbl/platform/io/logging -I`rospack find dbl_repos`/dbl/platform/io/configuration -I`rospack find dbl_repos`/dbl/platform/hardware/serial -I`rospack find dbl_repos`/dbl/platform/hardware/dynamixel -I`rospack find dbl_repos`/dbl/platform/hardware/dynamixel/dynamixel -I`rospack find dbl_repos`/dbl/platform/hardware/dynamixel/3mxl" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lthreemxl"/>
+  </export>
+
+</package>

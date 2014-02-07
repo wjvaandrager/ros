@@ -1,0 +1,154 @@
+#include <ros/ros.h>
+#include <threemxl/basearduino.h>
+#include <threemxl/C3mxlROS.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Float64.h>
+#include <rosbag/bag.h>
+#include <stdlib.h> 
+#include <iostream>     // std::cout
+#include <cmath>        // std::abs
+#include <sensor_msgs/JointState.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <boost/algorithm/string.hpp>
+
+#define _USE_MATH_DEFINES
+
+using std::cout;
+using std::endl;
+
+void DxlROSBaseArduino::init(char *path)
+{
+  CDxlConfig *config = new CDxlConfig();
+
+  if (path)
+  {
+    ROS_INFO("Using shared_serial");
+    motor1_ = new C3mxlROS(path);
+    motor2_ = new C3mxlROS(path);
+  }
+  else
+  {
+    ROS_INFO("Using direct connection");
+    motor1_ = new C3mxl();
+    motor2_ = new C3mxl();  
+
+    serial_port_.port_open("/dev/ttyUSB0", LxSerial::RS485_FTDI);
+    serial_port_.set_speed(LxSerial::S921600);
+    motor1_->setSerialPort(&serial_port_);
+    motor2_->setSerialPort(&serial_port_);
+  }
+
+  motor1_->setConfig(config->setID(106));
+  motor1_->init(false);
+  motor2_->setConfig(config->setID(107));
+  motor2_->init(false);
+  motor1_->set3MxlMode(PWM_MODE);
+  motor2_->set3MxlMode(PWM_MODE);
+  motor1_->setPIDPosition(0.1,0,0,5);
+  motor2_->setPIDPosition(0.1,0,0,5);
+  delete config;
+
+  speed1_pub = n.advertise<std_msgs::Float64>("speed1", 1);
+  speed2_pub = n.advertise<std_msgs::Float64>("speed2", 1);
+  pos1_pub = n.advertise<std_msgs::Float64>("pos1", 1);
+  pos2_pub = n.advertise<std_msgs::Float64>("pos2", 1);
+
+}
+
+void DxlROSBaseArduino::pos(double pos,double angle){
+  //draait eerst hoek als dat nodig is
+  if(angle != 0){
+    turn(angle);
+  }
+  motor1_->getLinearPos();
+  motor2_->getLinearPos();
+  //telt de huidige positie bij de gegeven positie op zodat de motor pos vooruit rijdt
+  motor1_->setLinearPos(motor1_->presentLinearPos() + pos,0.6,false);
+  motor2_->setLinearPos(motor2_->presentLinearPos() + pos,0.6,false); 
+}
+
+//draait de robot een bepaalde hoek om zijn eigen as
+void DxlROSBaseArduino::turn(double angle){
+
+  motor1_->getLinearPos();
+  motor2_->getLinearPos();
+  //berekend de positie de wielen voor en achteruit moeten rijden vanaf middelpunt tussen wielen
+  double pos1 = motor1_->presentLinearPos() + 2*M_PI*(0.2644)*(angle/360);
+  double pos2 = motor2_->presentLinearPos() - 2*M_PI*(0.2644)*(angle/360);
+  //stturt motoren aan
+  motor1_->setLinearPos(pos1,0.6,0.6,false);
+  motor2_->setLinearPos(pos2,0.6,0.6,false);
+}
+
+//published de posities en snelheden van de motor
+void DxlROSBaseArduino::publishStates(){
+  std_msgs::Float64 s1;
+  std_msgs::Float64 s2;
+  std_msgs::Float64 p1;
+  std_msgs::Float64 p2;  
+  
+  motor1_->getState();
+  motor2_->getState(); 
+  motor1_->getLinearPos();
+  motor2_->getLinearPos(); 
+
+  s1.data = motor1_->presentSpeed();
+  s2.data = motor2_->presentSpeed();
+  p1.data = motor1_->presentLinearPos();
+  p2.data = motor2_->presentLinearPos();
+
+  speed1_pub.publish(s1);
+  speed2_pub.publish(s2);
+  pos1_pub.publish(p1);
+  pos2_pub.publish(p2);
+}
+
+void DxlROSBaseArduino::arduinoCallback(const std_msgs::String::ConstPtr& msg)
+{
+  //splitst de message op in stukken
+  std::vector<std::string> strs;
+  boost::split(strs, msg->data, boost::is_any_of("\t "));
+  //haalt de benodigde doubles uit de message
+  double a1 = atof( strs[0].c_str() );
+  double distance = 30;
+  double speed = 0.5;
+  double speed1 = 0.5;
+  //kijkt of de base gecorrigeerd moet worden
+  if(a1 - distance > 2){
+    speed1 = 0.65;
+  }
+  if(a1 - distance < -2){
+    speed = 0.65;
+  }
+  motor1_->setPWM(speed,false);
+  motor2_->setPWM(speed1,false);
+}
+
+void DxlROSBaseArduino::spin()
+{
+  ros::Rate loop_rate(100);
+        
+  ros::Subscriber sub = n.subscribe<std_msgs::String>("arduino", 5, &DxlROSBaseArduino::arduinoCallback, this);
+  while(ros::ok()){
+    ros::spinOnce();
+    publishStates();
+    loop_rate.sleep();
+  }
+}
+
+int main(int argc, char **argv)
+{
+  ros::init(argc, argv, "dxl_ros_basearduino");
+
+  char *path=NULL;
+  if (argc == 2)
+    path = argv[1];
+ 
+  DxlROSBaseArduino dxl_ros_basearduino;
+  dxl_ros_basearduino.init(path);
+  dxl_ros_basearduino.spin();
+  
+  return 0;   
+} 
+

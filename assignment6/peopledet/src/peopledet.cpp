@@ -1,0 +1,162 @@
+#include <stdio.h>
+#include <dirent.h>
+#include <ios>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <ros/ros.h>
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/CameraInfo.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Int32.h>
+#include <std_msgs/String.h>
+#include <opencv2/opencv.hpp>
+#include <peopledet/peopledet.h>
+#include <stdlib.h> 
+using std::cout;
+using std::endl;
+using namespace cv;
+
+void ImageConverter::pcl(const sensor_msgs::Image::ConstPtr& msg){
+  cv_bridge::CvImageConstPtr cvImg= cv_bridge::toCvShare(msg);
+  pointCloud = cvImg->image;
+}
+
+void ImageConverter::pplDet(const sensor_msgs::Image::ConstPtr& msg){
+  
+    cv_bridge::CvImageConstPtr cvImg= cv_bridge::toCvShare(msg);
+    //namedWindow("opencv", CV_WINDOW_AUTOSIZE);
+    HOGDescriptor hog;
+    hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());
+    
+    Mat img = cvImg->image;
+    Mat image;
+    resize(img, image, Size(256, 192), 0, 0, INTER_CUBIC);
+    /*
+    Mat image = cvImg->image;
+    //int type = img.type();
+    image *= 50; 
+    
+    image.assignTo(image,CV_8U);
+    //cout << img << endl;
+    //cout << img.type() << endl;
+    //imshow("opencv", img);
+
+    */
+    vector<Rect> found, found_filtered;
+    hog.detectMultiScale(image, found, 0.0, Size(8,8), Size(32,32), 1.05, 2.0);
+    size_t i, j;
+    double rescale = 2.5;
+    double dist = 0;
+    rx = 0;
+    ry = 0;
+    if(found.size() > 0){
+      times = 50;
+    }else{
+      if(times>0){
+	for(i=0; i<oldfound.size();i++){
+	  found.push_back(oldfound[i]);
+	}
+	times--;
+      }
+    }
+    for (i=0; i<found.size(); i++) 
+    {
+	Rect r = found[i];
+	for (j=0; j<found.size(); j++) 
+	    if (j!=i && (r & found[j]) == r)
+		break;
+	if (j== found.size())
+	    r.width *=rescale;
+	    r.height *=rescale;
+	    r.x *=rescale;
+	    r.y *=rescale;
+	    found_filtered.push_back(r);
+    }
+    for (i=0; i<found_filtered.size(); i++) 
+    {
+	Rect r = found_filtered[i];
+	r.x += cvRound(r.width*0.1);
+		r.width = cvRound(r.width*0.8);
+		r.y += cvRound(r.height*0.07);
+		r.height = cvRound(r.height*0.8);
+		rectangle(img, r.tl(), r.br(), Scalar(0,255,0), 3);  
+		//zoek persoon dichtst bij midden op;
+		if((abs(320 -r.x + 0.5*r.width) + abs(240 -r.y + 0.5*r.height))<(rx+ry)){
+		  rx = r.x + 0.5*r.width;
+		  ry = r.y + 0.5*r.height;
+		}		
+    }    
+    std_msgs::Bool b;
+    std_msgs::Int32 m;
+    b.data = true;
+    m.data = 0;
+    if(found_filtered.size() > 0){
+      double temp = pointCloud.at<float>(rx,ry);
+      if(temp > 1.5){
+	dist = temp - 1.5;
+      }
+      std_msgs::String s;
+      stringstream ss;
+      ss << dist << " " << (rx-320)*0.09 << endl;
+      s.data = ss.str();
+      person_pub_.publish(s);
+      b.data = false;
+      m.data = 1;
+    }
+    mode_pub_.publish(m);
+    pause_pub_.publish(b);
+    //img.assignTo(img,type);
+    cv_bridge::CvImage out_msg;
+    out_msg.header   = msg->header;
+    out_msg.encoding = msg->encoding; 
+    out_msg.image    = img; 
+    //image.data = img;
+    image_pub_.publish(out_msg.toImageMsg());
+    oldfound.clear();
+    for(i=0; i<found.size();i++){
+      oldfound.push_back(found[i]);
+    }
+//     image_pub_.publish(msg);
+}
+
+void ImageConverter::spin(){
+  
+  ros::Rate loop_rate(50); 
+    times=0;
+  //descriptorVector = new vector<float>();
+    /*
+  std::ifstream data;
+  data.open("/home/pc_willem/ros/trainHOG/genfiles/descriptorvector.dat");
+  if (data.is_open()){
+    float value;
+    while (data >> value) {
+        descriptorVector.push_back(value);
+    }
+    data.close();
+  } else cout << "Unable to open file" << endl;
+  */
+  image_pub_ = nh_.advertise<sensor_msgs::Image>("/camera/depth/test", 1);
+  pause_pub_ = nh_.advertise<std_msgs::Bool>("/visualinput", 1);
+  person_pub_ = nh_.advertise<std_msgs::String>("/person", 1);
+  mode_pub_ = nh_.advertise<std_msgs::Int32>("/robotmode", 1);
+  color_sub_ = nh_.subscribe("/camera/rgb/image_color", 1, &ImageConverter::pplDet, this);
+  depth_sub_ = nh_.subscribe("/camera/depth_registered/image_rect", 1, &ImageConverter::pcl, this);
+  
+  while(ros::ok()){
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
+}
+
+int main(int argc, char** argv)
+{
+  ros::init(argc, argv, "image_converter");
+
+  ImageConverter ic;
+  ic.spin();
+  return 0;
+}

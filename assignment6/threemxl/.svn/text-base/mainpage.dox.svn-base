@@ -1,0 +1,30 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b threemxl allows multiple ROS nodes to communicate with a single Dynamixel chain using a shared_serial node. It also wraps the direct communication classes in dbl_repos in a nice ROS package. The 3mxl hardware documentation can be found <a href="../../../3mxl/">here</a>
+
+As \b threemxl depends on the GNU readline library, make sure to run <tt>rosdep install threemxl</tt> at least once!
+
+<!-- 
+Provide an overview of your package.
+-->
+
+
+\section codeapi Code API
+
+The main classes, CDynamixelROS and C3mxlROS, just subclass CDynamixel and C3mxl in <a href="../../dbl_repos/html/index.html">dbl_repos</a> and set the package handler to CDxlROSPacketHandler.
+
+<!--
+Provide links to specific auto-generated API documentation within your
+package that is of particular interest to a reader. Doxygen will
+document pretty much every part of your code, so do your best here to
+point the reader to the actual API.
+
+If your codebase is fairly large or has different sets of APIs, you
+should use the doxygen 'group' tag to keep these APIs together. For
+example, the roscpp documentation has 'libros' group.
+-->
+
+
+*/

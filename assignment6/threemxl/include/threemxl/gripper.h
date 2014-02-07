@@ -1,0 +1,50 @@
+#ifndef __THREEMXL_GRIPPER_H
+#define __THREEMXL_GRIPPER_H
+
+#include <ros/ros.h>
+#include <CDxlGeneric.h>
+#include <std_msgs/Int32.h>
+#include <sensor_msgs/JointState.h>
+
+/// Usage example for CDynamixel and CDynamixelROS
+class DxlROSGripper
+{
+
+  protected:
+    ros::NodeHandle nh_;   ///< ROS node handle
+    CDxlGeneric *motor_;   ///< Motor interface
+    LxSerial serial_port_; ///< Serial port interface
+     
+  public:
+    double prev;
+    int check;
+    int count;
+    double cur;    
+    bool closed;
+    sensor_msgs::JointState js;
+    ros::Publisher joint_pub;
+    /// Constructor
+    DxlROSGripper() : nh_("~"), motor_(NULL){ }
+    /// Destructor
+    /** Delete motor interface, close serial port, and shut down node handle */
+    ~DxlROSGripper()
+    {
+      if (motor_)
+        delete motor_;
+
+      if (serial_port_.is_port_open())
+        serial_port_.port_close();
+          
+      nh_.shutdown();
+    }
+
+    void chatterCallback(const std_msgs::Int32::ConstPtr& m);
+    /// Initialize node
+    /** \param path path to shared_serial node */
+    void init(char *path);
+    
+    /// Spin
+    void spin();
+};    
+
+#endif /* __THREEMXL_GRIPPER_H */

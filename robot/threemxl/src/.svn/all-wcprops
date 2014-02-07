@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/dbl-ros-pkg/!svn/ver/1932/trunk/drivers/threemxl/src
+END
+LxFTDI.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/dbl-ros-pkg/!svn/ver/1194/trunk/drivers/threemxl/src/LxFTDI.cpp
+END
+benchmark.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/dbl-ros-pkg/!svn/ver/904/trunk/drivers/threemxl/src/benchmark.cpp
+END
+example.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/dbl-ros-pkg/!svn/ver/64/trunk/drivers/threemxl/src/example.cpp
+END
+console.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/dbl-ros-pkg/!svn/ver/1932/trunk/drivers/threemxl/src/console.cpp
+END
+CDxlROSPacketHandler.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/dbl-ros-pkg/!svn/ver/1579/trunk/drivers/threemxl/src/CDxlROSPacketHandler.cpp
+END
+syncreadtest.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/dbl-ros-pkg/!svn/ver/901/trunk/drivers/threemxl/src/syncreadtest.cpp
+END

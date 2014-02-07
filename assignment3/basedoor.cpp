@@ -1,0 +1,289 @@
+#include <ros/ros.h>
+#include <threemxl/basedoor.h>
+#include <threemxl/C3mxlROS.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Float64.h>
+#include <rosbag/bag.h>
+#include <stdlib.h> 
+#include <iostream>     // std::cout
+#include <cmath>        // std::abs
+#include <sensor_msgs/JointState.h>
+#include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <boost/algorithm/string.hpp>
+
+#define _USE_MATH_DEFINES
+#define RAD (M_PI/180)
+using std::cout;
+using std::endl;
+
+void DxlROSBaseDoor::init(char *path)
+{
+  CDxlConfig *config = new CDxlConfig();
+
+  if (path)
+  {
+    ROS_INFO("Using shared_serial");
+    motor1_ = new C3mxlROS(path);
+    motor2_ = new C3mxlROS(path);
+  }
+  else
+  {
+    ROS_INFO("Using direct connection");
+    motor1_ = new C3mxl();
+    motor2_ = new C3mxl();  
+
+    serial_port_.port_open("/dev/ttyUSB0", LxSerial::RS485_FTDI);
+    serial_port_.set_speed(LxSerial::S921600);
+    motor1_->setSerialPort(&serial_port_);
+    motor2_->setSerialPort(&serial_port_);
+  }
+
+  motor1_->setConfig(config->setID(106));
+  motor1_->init(false);
+  motor2_->setConfig(config->setID(107));
+  motor2_->init(false);
+  motor1_->set3MxlMode(POSITION_MODE);
+  motor2_->set3MxlMode(POSITION_MODE);
+  motor1_->setPIDPosition(0.1,0,0,5);
+  motor2_->setPIDPosition(0.1,0,0,5);
+  delete config;
+
+  speed1_pub = n.advertise<std_msgs::Float64>("speed1", 1);
+  speed2_pub = n.advertise<std_msgs::Float64>("speed2", 1);
+  x_pub = n.advertise<std_msgs::Float64>("x", 1);
+  y_pub = n.advertise<std_msgs::Float64>("y", 1);
+  angle_pub = n.advertise<std_msgs::Float64>("angle", 1);
+  
+}
+
+void DxlROSBaseDoor::pos(double pos,double angle){
+  //draait eerst hoek als dat nodig is
+  if(angle != 0){
+    turn(angle);
+  }
+  motor1_->getLinearPos();
+  motor2_->getLinearPos();
+  //telt de huidige positie bij de gegeven positie op zodat de motor pos vooruit rijdt
+  motor1_->setLinearPos(motor1_->presentLinearPos() + pos,0.6,false);
+  motor2_->setLinearPos(motor2_->presentLinearPos() + pos,0.6,false); 
+  usleep(50000);
+  motor1_->getState();
+  motor2_->getState();
+  while(motor1_->presentSpeed() != 0 || motor2_->presentSpeed() != 0){
+    publishStates();
+  }
+}
+
+//draait de robot een bepaalde hoek om zijn eigen as
+void DxlROSBaseDoor::turn(double angle){
+
+  motor1_->getLinearPos();
+  motor2_->getLinearPos();
+  //berekend de positie de wielen voor en achteruit moeten rijden vanaf middelpunt tussen wielen
+  double pos1 = motor1_->presentLinearPos() + 2*M_PI*(0.2644)*(angle/360);
+  double pos2 = motor2_->presentLinearPos() - 2*M_PI*(0.2644)*(angle/360);
+  //stuurt motoren aan
+  motor1_->setLinearPos(pos1,0.6,0.6,false);
+  motor2_->setLinearPos(pos2,0.6,0.6,false);
+  usleep(50000);
+  motor1_->getState();
+  motor2_->getState();
+  while(motor1_->presentSpeed() != 0 || motor2_->presentSpeed() != 0){
+    publishStates();
+  }
+}
+
+//published de posities en snelheden van de motor
+void DxlROSBaseDoor::publishStates(){
+  std_msgs::Float64 s1;
+  std_msgs::Float64 s2;  
+  
+  motor1_->getState();
+  motor2_->getState(); 
+
+  s1.data = motor1_->presentSpeed();
+  s2.data = motor2_->presentSpeed();
+
+  speed1_pub.publish(s1);
+  speed2_pub.publish(s2);
+}
+
+void DxlROSBaseDoor::doorCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
+{
+  double count = 6;
+  double count1;
+  bool free = true;
+  double distRight = 0;
+  double distLeft = 0;
+  double distWall;
+  double angleLeft = 0;
+  double angleRight = 0;
+  double angleWall;
+  for(int i = 3;i<=5;i++){
+   //bereken hoek en afstand tot muur
+   distRight+=distBase(msg->ranges[i],msg->ranges[i+2],1);
+   distLeft+=distBase(msg->ranges[119-i],msg->ranges[117-i],1);
+   double length = cosRuleLength(msg->ranges[i],msg->ranges[i+2],1);
+   angleRight += fabs(cosRuleAngle(msg->ranges[i],length,msg->ranges[i+2]) + (60 - i)/2 - 90);
+   cout <<msg->ranges[i] << " " << msg->ranges[i + 2]<<" " << length << " angleRight: " << angleRight << endl;
+   length = cosRuleLength(msg->ranges[119-i],msg->ranges[117-i],1);
+   angleLeft += fabs(cosRuleAngle(msg->ranges[119- i],length,msg->ranges[117-i]) + (59 - i)/2 - 90);
+   cout <<msg->ranges[119-i] << " " << msg->ranges[117-i]<<" " << length << " angleLeft: " << angleLeft << endl;
+  }
+  distLeft /= 3;
+  distRight /= 3;
+  distWall = fabs(distLeft - distRight);
+  
+  angleLeft /= 3;
+  angleRight /= 3;
+  angleWall = fabs(angleLeft - angleRight);
+  //cout <<"distLeft: " << distLeft <<" distRight: " << distRight << " angleLeft: " << angleLeft << " angleRight: " << angleRight << endl;
+  if(distWall < 0.1 && angleWall < 8){
+     //cout <<"distLeft: " << distLeft <<" distRight: " << distRight << " distWall: " << distWall << endl;
+  //if(fabs(distLeft - distRight)< 0.3){
+    while((distBase(msg->ranges[count],msg->ranges[count + 4],2) - distRight) < 0.5 && count <= 58){
+      count++;
+    }    
+    while((distBase(msg->ranges[count + 4],msg->ranges[count],2) - distRight) < 0.5 && count >= 58 && count < 113){
+      count++;
+    }
+    count1 = count;
+    while(fabs(distBase(msg->ranges[count1],msg->ranges[count1+4],2) - distLeft) > 0.1 && count1 <= 58){
+      count1++;
+    }
+    while(fabs(distBase(msg->ranges[count1 + 4],msg->ranges[count1],2) - distLeft) > 0.1 && count1 >= 58 && count1 < 113){
+      count1++;
+    }
+    //cout << "msg ranges " <<msg->ranges[count1 + 1]<< " object " << object << " distBase " << distBase(msg->ranges[count1 + 1],object,1) << " " << count1 << " " <<  msg->ranges[count1] << endl;
+    while(fabs(distBase(msg->ranges[count -4],msg->ranges[count],2) -  distRight) > 0.1 && count >= 62){
+      count--;
+    }
+    while(fabs(distBase(msg->ranges[count],msg->ranges[count - 4],2) -  distRight) > 0.1 && count <=62 && count > 6){
+      count--;
+    }
+     cout << count << " " <<  msg->ranges[count] << endl;
+    if(count <= 7 || count1 >= 112){
+      free = false;
+    }
+    cout <<"count: " << count <<" count1: " << count1 << endl;
+    if(free){
+      //breedte deur
+      double distance = distanceObjects(count - 1,count1+1,msg->ranges[count -1],msg->ranges[count1+1]);
+      cout<< "Distance: " << distance << endl;
+      if(distance > 0.7){
+	
+	double fi = cosRuleAngle(msg->ranges[count1+1],distance,msg->ranges[count-1]);
+	//midden van de deur
+	double l3 = 0.5*distance;
+    //     afstand tussen kinect en middelpunt deur
+	double l4 = cosRuleLength(l3,msg->ranges[count1+1],fi);
+	double gamma = cosRuleAngle(l3,l4,msg->ranges[count1+1]);
+	double x = l4*cos(gamma*RAD);
+	double y = l4*sin(gamma*RAD);
+	cout << " alfa " << (60 - count)/2 << " beta " << (count1 - 60)/2 << " l2: " << msg->ranges[count-1] << " l1: " << msg->ranges[count1+1]<< " hoek: " << (count1 - count)/2 << endl;
+	cout << distance << " fi: " << fi << " gamma: " <<  gamma << " l3: " << l3 << " l4: " << l4 << " x: " << x << " y: " << y << endl;
+        std_msgs::Float64 xp;
+	std_msgs::Float64 yp;  
+	std_msgs::Float64 a;  
+	
+	xp.data = x;
+	yp.data = y;
+	
+	x_pub.publish(xp);
+	y_pub.publish(yp);
+	
+	if(gamma > 90){
+	  a.data = gamma - 180;
+
+	  angle_pub.publish(a);
+	  
+	  pos(fabs(x),gamma - 180);
+	  pos(fabs(y) - 0.2,90);
+	  
+	  motor1_->getLinearPos();
+	  motor2_->getLinearPos();
+	  //telt de huidige positie bij de gegeven positie op zodat de motor pos vooruit rijdt
+	  motor1_->setLinearPos(motor1_->presentLinearPos() + 0.3,0.2,0.2,false);
+	  motor2_->setLinearPos(motor2_->presentLinearPos() + 0.3,0.2,0.2,false); 
+	}else{
+	  a.data = gamma;
+	  
+	  angle_pub.publish(a);
+	  
+	  pos(x,gamma);
+	  pos(y - 0.2,-90);
+	  
+	  motor1_->getLinearPos();
+	  motor2_->getLinearPos();
+	  //telt de huidige positie bij de gegeven positie op zodat de motor pos vooruit rijdt
+	  motor1_->setLinearPos(motor1_->presentLinearPos() + 0.3,0.2,0.2,false);
+	  motor2_->setLinearPos(motor2_->presentLinearPos() + 0.3,0.2,0.2,false); 
+	}
+	usleep(100000);
+	motor1_->getState();
+	motor2_->getState();
+	while(motor1_->presentSpeed() >0 || motor2_->presentSpeed() >0){
+	  publishStates();
+	  motor1_->getState();
+	  motor2_->getState();
+	}
+      }
+    }
+  }
+}
+
+double DxlROSBaseDoor::distanceObjects(double count, double count1, double dist, double dist1){
+  //hoek tussen deur punten
+  double angle = (count1 - count)/2;
+  //cosinus regel;
+  return cosRuleLength(dist,dist1,angle);
+}
+
+double DxlROSBaseDoor::cosRuleLength(double l1,double l2,double angle){
+  return sqrt(pow(l1,2) + pow(l2,2) - 2*l1*l2*cos(angle*RAD));
+}
+
+//l3 is overstaande zijde
+double DxlROSBaseDoor::cosRuleAngle(double l1,double l2,double l3){
+  return acos((pow(l1,2) + pow(l2,2) - pow(l3,2))/(2*l1*l2))/RAD;
+}
+
+double DxlROSBaseDoor::distBase(double l1,double l2,double angle){
+  double l3 = cosRuleLength(l1,l2,angle);
+//   return fabs(90 - angleMax - cosRuleAngle(l1,l3,l2));
+  return l1*sin(cosRuleAngle(l1,l3,l2)*RAD);
+}
+
+void DxlROSBaseDoor::spin()
+{
+  ros::Rate loop_rate(50);
+        
+  ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("scan", 5, &DxlROSBaseDoor::doorCallback, this);
+  //ros::Subscriber p_sub = n.subscribe<sensor_msgs::PointCloud2>("camera/depth/points", 5, &DxlROSBaseDoor::pc2Callback, this);
+  while(ros::ok()){
+    ros::spinOnce();
+    publishStates();
+    loop_rate.sleep();
+  }
+}
+
+int main(int argc, char **argv)
+{
+  
+  ros::init(argc, argv, "dxl_ros_basedoor");
+
+  char *path=NULL;
+  if (argc == 2)
+    path = argv[1];
+ 
+  DxlROSBaseDoor dxl_ros_basedoor;
+  
+   dxl_ros_basedoor.init(path);
+   dxl_ros_basedoor.spin();
+ 
+  return 0;   
+} 
+

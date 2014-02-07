@@ -1,0 +1,153 @@
+#include <ros/ros.h>
+#include <threemxl/basecontrol.h>
+#include <threemxl/C3mxlROS.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Float64.h>
+#include <rosbag/bag.h>
+#include <stdlib.h> 
+#include <iostream>     // std::cout
+#include <cmath>        // std::abs
+#include <sensor_msgs/JointState.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <boost/algorithm/string.hpp>
+
+#define _USE_MATH_DEFINES
+
+using std::cout;
+using std::endl;
+
+void DxlROSBaseControl::init(char *path)
+{
+  CDxlConfig *config = new CDxlConfig();
+
+  if (path)
+  {
+    ROS_INFO("Using shared_serial");
+    motor1_ = new C3mxlROS(path);
+    motor2_ = new C3mxlROS(path);
+  }
+  else
+  {
+    ROS_INFO("Using direct connection");
+    motor1_ = new C3mxl();
+    motor2_ = new C3mxl();  
+
+    serial_port_.port_open("/dev/ttyUSB0", LxSerial::RS485_FTDI);
+    serial_port_.set_speed(LxSerial::S921600);
+    motor1_->setSerialPort(&serial_port_);
+    motor2_->setSerialPort(&serial_port_);
+  }
+
+  motor1_->setConfig(config->setID(106));
+  motor1_->init(false);
+  motor2_->setConfig(config->setID(107));
+  motor2_->init(false);
+  motor1_->set3MxlMode(PWM_MODE);
+  motor2_->set3MxlMode(PWM_MODE);
+  motor1_->setPIDPosition(0.1,0,0,5);
+  motor2_->setPIDPosition(0.1,0,0,5);
+  delete config;
+
+  speed1_pub = n.advertise<std_msgs::Float64>("speed1", 1);
+  speed2_pub = n.advertise<std_msgs::Float64>("speed2", 1);
+  pos1_pub = n.advertise<std_msgs::Float64>("pos1", 1);
+  pos2_pub = n.advertise<std_msgs::Float64>("pos2", 1);
+
+}
+
+//published de posities en snelheden van de motor
+void DxlROSBaseControl::publishStates(){
+  std_msgs::Float64 s1;
+  std_msgs::Float64 s2;
+  std_msgs::Float64 p1;
+  std_msgs::Float64 p2;  
+  
+  motor1_->getState();
+  motor2_->getState(); 
+  motor1_->getLinearPos();
+  motor2_->getLinearPos(); 
+
+  s1.data = motor1_->presentSpeed();
+  s2.data = motor2_->presentSpeed();
+  p1.data = motor1_->presentLinearPos();
+  p2.data = motor2_->presentLinearPos();
+
+  speed1_pub.publish(s1);
+  speed2_pub.publish(s2);
+  pos1_pub.publish(p1);
+  pos2_pub.publish(p2);
+}
+
+void DxlROSBaseControl::ps3Callback(const std_msgs::String::ConstPtr& msg)
+{
+
+  //splitst de message op in stukken
+  std::vector<std::string> strs;
+  boost::split(strs, msg->data, boost::is_any_of("\t "));
+  //haalt de benodigde double uit de message
+  double linear = atof( strs[0].c_str() );
+  double angular = atof( strs[1].c_str() );
+  double power = abs(atof( strs[2].c_str() ));
+  double back = atof( strs[3].c_str() );
+  //stelt error van linearpos bij
+  if(power > 0){
+    drive(power,angular);
+  }else if(back > 0 && power == 0){
+    drive(back,angular);
+  }else{
+    steer(linear,angular);
+  }
+}
+
+void DxlROSBaseControl::drive(double gas,double angular){
+  if(angular >= 0){
+    motor1_->setPWM(gas*(1 - angular),false);
+    motor2_->setPWM(gas,false); 
+  } else {
+    motor1_->setPWM(gas,false);
+    motor2_->setPWM(gas*(1 + angular),false);
+  } 
+}
+
+void DxlROSBaseControl::steer(double linear,double angular){
+
+  if(angular >= 0){
+    motor1_->setPWM(linear*(1 - angular),false);
+    motor2_->setPWM(linear,false); 
+  } else {
+    motor1_->setPWM(linear,false);
+    motor2_->setPWM(linear*(1 + angular),false);
+  } 
+}
+
+
+
+void DxlROSBaseControl::spin()
+{
+  ros::Rate loop_rate(100);
+        
+  ros::Subscriber sub = n.subscribe<std_msgs::String>("ps3", 1, &DxlROSBaseControl::ps3Callback, this);
+  while(ros::ok()){
+    ros::spinOnce();
+    publishStates();
+    loop_rate.sleep();
+  }
+
+}
+
+int main(int argc, char **argv)
+{
+  ros::init(argc, argv, "dxl_ros_basecontrol");
+
+  char *path=NULL;
+  if (argc == 2)
+    path = argv[1];
+ 
+  DxlROSBaseControl dxl_ros_basecontrol;
+  dxl_ros_basecontrol.init(path);
+  dxl_ros_basecontrol.spin();
+  
+  return 0;   
+} 
+

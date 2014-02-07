@@ -1,0 +1,55 @@
+Threemxl configuration options
+------------------------------
+
+Option                          Function
+
+ID                              
+type
+returndelay                     setReturnDelayTime
+anglelowerlimit                 setAngleLimits
+angleupperlimit                 setAngleLimits
+clockwiseispositive             setPositiveDirection
+torquelimit                     setTorqueLimit
+mxlmode                         set3MxlMode
+watchdogmode                    setWatchdogMode
+watchdogtime                    setWatchdogTime
+watchdogmultiplier              setWatchdogMultiplier
+statusreturnlevel               setRetlevel
+motorconstant                   setMotorConstant
+gearboxratiomotor               setGearboxRatioMotor
+gearboxratiojoint               setGearboxRatioJoint
+encodercountmotor               setEncoderCountMotor
+offsetmotor                     setMotorOffset
+maxuninitialisedmotorcurrent    setMaxUninitializedMotorCurrent
+maxmotorcurrent                 setMaxMotorCurrent
+encodercountjoint               setEncoderCountJoint
+offsetjoint                     setJointOffset
+zerolengthspring                setZeroLengthSpring
+springstiffness                 setSpringStiffness
+jointclockwiseispositive        setPositiveDirectionJoint
+acceleration                    setAcceleration
+maxpeakmotorcurrent             setMaxPeakMotorCurrent
+maxcontinuousmotorcurrent       setMaxContinuousMotorCurrent
+motorwindingtimeconstant        setMotorWindingTimeConstant
+encoderindexlevelmotor          setEncoderIndexLevelMotor
+wheeldiameter                   setWheelDiameter
+pcurrent                        setPIDCurrent
+icurrent                        setPIDCurrent
+dcurrent                        setPIDCurrent
+ilcurrent                       setPIDCurrent
+pposition                       setPIDPosition
+iposition                       setPIDPosition
+dposition                       setPIDPosition
+ilposition                      setPIDPosition
+pspeed                          setPIDSpeed
+ispeed                          setPIDSpeed
+dspeed                          setPIDSpeed
+ilspeed                         setPIDSpeed
+ptorque                         setPIDTorque
+itorque                         setPIDTorque
+dtorque                         setPIDTorque
+iltorque                        setPIDTorque
+penergy                         setPIDEnergy
+ienergy                         setPIDEnergy
+denergy                         setPIDEnergy
+ilenergy                        setPIDEnergy

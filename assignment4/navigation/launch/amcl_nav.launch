@@ -1,0 +1,17 @@
+<launch>
+
+  <!-- Run the map server -->
+  <node name="map_server" pkg="map_server" type="map_server" args="/home/pc_willem/ros/maps/map.pgm 0.05">   
+    <param name="frame_id" type="str" value="map" />
+  </node>
+
+  <!--- Run the kinect -->
+  <include file="$(find slam)/launch/slam.launch" />
+
+  <!--- Run AMCL -->
+  <include file="$(find navigation)/config/amcl.launch" />
+  
+  <!--- Run Move Base -->
+  <node name="basenav" pkg="threemxl" type="basenav" />
+
+</launch>

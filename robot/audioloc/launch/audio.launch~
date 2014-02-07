@@ -1,0 +1,9 @@
+<launch>
+
+  <!--- Run Move Base -->
+  <node name="main" pkg="audioloc" type="main" />
+
+  <!--- Run Move Base -->
+  <node name="micview" pkg="threemxl" type="micview" />
+  
+</launch>

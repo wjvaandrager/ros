@@ -1,0 +1,204 @@
+#include <ros/ros.h>
+#include <threemxl/basearduino.h>
+#include <threemxl/C3mxlROS.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Float64.h>
+#include <rosbag/bag.h>
+#include <stdlib.h> 
+#include <iostream>     // std::cout
+#include <cmath>        // std::abs
+#include <sensor_msgs/JointState.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <boost/algorithm/string.hpp>
+
+#define _USE_MATH_DEFINES
+
+using std::cout;
+using std::endl;
+
+void DxlROSBaseArduino::init(char *path)
+{
+  CDxlConfig *config = new CDxlConfig();
+
+  if (path)
+  {
+    ROS_INFO("Using shared_serial");
+    motor1_ = new C3mxlROS(path);
+    motor2_ = new C3mxlROS(path);
+  }
+  else
+  {
+    ROS_INFO("Using direct connection");
+    motor1_ = new C3mxl();
+    motor2_ = new C3mxl();  
+
+    serial_port_.port_open("/dev/ttyUSB0", LxSerial::RS485_FTDI);
+    serial_port_.set_speed(LxSerial::S921600);
+    motor1_->setSerialPort(&serial_port_);
+    motor2_->setSerialPort(&serial_port_);
+  }
+
+  motor1_->setConfig(config->setID(106));
+  motor1_->init(false);
+  motor2_->setConfig(config->setID(107));
+  motor2_->init(false);
+  //PWM mode voor snelle overgangen
+  motor1_->set3MxlMode(PWM_MODE);
+  motor2_->set3MxlMode(PWM_MODE);
+  motor1_->setPIDPosition(0.1,0,0,5);
+  motor2_->setPIDPosition(0.1,0,0,5);
+  delete config;
+
+  speed1_pub = n.advertise<std_msgs::Float64>("speed1", 1);
+  speed2_pub = n.advertise<std_msgs::Float64>("speed2", 1);
+  pos1_pub = n.advertise<std_msgs::Float64>("pos1", 1);
+  pos2_pub = n.advertise<std_msgs::Float64>("pos2", 1);
+
+}
+
+void DxlROSBaseArduino::pos(double pos,double angle){
+  //draait eerst hoek als dat nodig is
+  if(angle != 0){
+    turn(angle);
+  }
+  motor1_->getLinearPos();
+  motor2_->getLinearPos();
+  //telt de huidige positie bij de gegeven positie op zodat de motor pos vooruit rijdt
+  motor1_->setLinearPos(motor1_->presentLinearPos() + pos,0.6,false);
+  motor2_->setLinearPos(motor2_->presentLinearPos() + pos,0.6,false); 
+}
+
+//draait de robot een bepaalde hoek om zijn eigen as
+void DxlROSBaseArduino::turn(double angle){
+
+  motor1_->getLinearPos();
+  motor2_->getLinearPos();
+  //berekend de positie de wielen voor en achteruit moeten rijden vanaf middelpunt tussen wielen
+  double pos1 = motor1_->presentLinearPos() + 2*M_PI*(0.2644)*(angle/360);
+  double pos2 = motor2_->presentLinearPos() - 2*M_PI*(0.2644)*(angle/360);
+  //stturt motoren aan
+  motor1_->setLinearPos(pos1,0.6,0.6,false);
+  motor2_->setLinearPos(pos2,0.6,0.6,false);
+}
+
+//published de posities en snelheden van de motor
+void DxlROSBaseArduino::publishStates(){
+  std_msgs::Float64 s1;
+  std_msgs::Float64 s2;
+  std_msgs::Float64 p1;
+  std_msgs::Float64 p2;  
+  
+  motor1_->getState();
+  motor2_->getState(); 
+  motor1_->getLinearPos();
+  motor2_->getLinearPos(); 
+
+  s1.data = motor1_->presentSpeed();
+  s2.data = motor2_->presentSpeed();
+  p1.data = motor1_->presentLinearPos();
+  p2.data = motor2_->presentLinearPos();
+
+  speed1_pub.publish(s1);
+  speed2_pub.publish(s2);
+  pos1_pub.publish(p1);
+  pos2_pub.publish(p2);
+}
+
+void DxlROSBaseArduino::arduinoCallback(const std_msgs::String::ConstPtr& msg)
+{
+  //splitst de message op in stukken
+  std::vector<std::string> strs;
+  boost::split(strs, msg->data, boost::is_any_of("\t "));
+  //haalt de benodigde doubles uit de message
+  double a1 = atof( strs[0].c_str() );
+  double a2 = atof( strs[1].c_str() );
+  //snelheden wielen
+  double speed;
+  double speed1;
+  //afstand die behouden moet worden tot object
+  double factor = 60;
+  if(a1>2){
+    //snelheid linker wiel wordt berekent ten opzicht van de afstand tot de muur. hoe verder van factor hoe sneller.
+    speed = (a1/50-factor/50);
+    //maximale snelheid van 0.9
+    if(speed > 0.9){
+      speed = 0.9;
+    }
+    if(speed < -0.9){
+      speed = -0.9;
+    }
+    //minimale snelheid tot 2 cm van juiste positie, omdat bij lagere PWM de base niet genoeg kracht heeft om te rijden.
+    if(speed < 0.15 && speed > 0.04){
+      speed = 0.15;
+    }
+    if(speed > -0.15 && speed < -0.04){
+      speed = -0.15;
+    }
+
+    
+  }else{
+    //als a1 -1 is en out of range
+    speed = 0;
+  }
+  if(a2>2){
+    //snelheid rechter wiel wordt berekent ten opzicht van de afstand tot de muur. hoe verder van factor hoe sneller
+    speed1 = (a2/50-factor/50);
+       //maximale snelheid van 0.9
+    if(speed1>0.9){
+      speed1 = 0.9;
+    }
+    if(speed1 < -0.9){
+      speed1 = -0.9;
+    }
+    //minimale snelheid tot 2 cm van juiste positie, omdat bij lagere PWM de base niet genoeg kracht heeft om te rijden.
+    if(speed1 < 0.15 && speed1 > 0.04){
+      speed1 = 0.15;
+    }
+    if(speed1 > -0.15 && speed1 < -0.04){
+      speed1 = -0.15;
+    }
+  //als a2 -1 is en out of range
+  }else{
+    speed1 = 0;
+  }
+  //als een van beide sensoren opeens een hogere input krijgt of -1 betekent dat het wiel zijn object waarschijnlijk kwijt is.
+  //in dat geval draai naar het andere wiel toe, die nog wel het object ziet.
+  if(a1 == -1 || a2 == -1 || fabs(a2 - a1)>30){
+    if(a2 == -1 || a2 > a1){
+      speed1 = 0.4; 
+    }else{
+      speed = 0.4;
+    }
+  }
+  motor1_->setPWM(speed,false);
+  motor2_->setPWM(speed1,false);
+}
+
+void DxlROSBaseArduino::spin()
+{
+  ros::Rate loop_rate(100);
+        
+  ros::Subscriber sub = n.subscribe<std_msgs::String>("arduino", 5, &DxlROSBaseArduino::arduinoCallback, this);
+  while(ros::ok()){
+    ros::spinOnce();
+    publishStates();
+    loop_rate.sleep();
+  }
+}
+
+int main(int argc, char **argv)
+{
+  ros::init(argc, argv, "dxl_ros_basearduino");
+
+  char *path=NULL;
+  if (argc == 2)
+    path = argv[1];
+ 
+  DxlROSBaseArduino dxl_ros_basearduino;
+  dxl_ros_basearduino.init(path);
+  dxl_ros_basearduino.spin();
+  
+  return 0;   
+} 
+

@@ -1,0 +1,7 @@
+<launch>    
+  <!-- basecontrol Node-->
+  <node pkg="threemxl" type="basecontrol1" name="basecontrol1"/>
+  
+  <!-- basecontrol Node-->
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping"/>
+</launch>

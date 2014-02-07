@@ -1,0 +1,24 @@
+<launch>
+
+  <!--- Run the navigation -->
+  <include file="$(find navigation)/launch/amcl_nav.launch" />
+  
+  <!--- Run the ps3controller -->
+  <include file="$(find basecontrol)/launch/joy.launch" />
+  
+  <!--- Run the face detection -->
+  <include file="$(find face_detector)/launch/face_detector.rgbd.launch" />
+
+    <!--- Run the sound detection -->
+  <include file="$(find audioloc)/launch/audio.launch" />
+  
+  <!--- Run the node for determining the navigation goal -->
+  <node pkg="basecontrol" type="goal" name="goal" />
+  
+  <!--- Run the node for recognizing intruders -->
+  <node pkg="peopledet" type="peopledet" name="peopledet" />
+  
+  <!--- Run the node for sounding alarm -->
+  <node pkg="basecontrol" type="alarm" name="alarm" />
+  
+</launch>

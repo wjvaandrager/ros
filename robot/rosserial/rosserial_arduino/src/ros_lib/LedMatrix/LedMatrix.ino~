@@ -1,0 +1,139 @@
+//**************************************************************//
+//  Name    : RGB color for RGB dot matrix                              
+//  Author  : D.C. Kaandorp
+//  Date    : 14-01-2014                               
+//  Version : 2.0                                                                     
+//****************************************************************
+
+#include <ros.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Float64.h>
+
+#include <string.h>
+
+ros::NodeHandle  nh;
+//Pin connected to ST_CP of 74HC595
+int latchPin = 12;
+//Pin connected to SH_CP of 74HC595
+int clockPin = 11;
+////Pin connected to DS of 74HC595
+int dataPin = 10;
+int delayTime = 2;
+int frameCycles = 20;
+byte array1[155] = {24, 8, 1, 2, 0, 112, 119, 0, 113, 113, 87, 0, 80, 0, 16, 21, 0, 81, 81, 81, 0, 80, 0, 112, 116, 0, 81, 81, 87, 0, 80, 0, 80, 84, 0, 85, 85, 85, 0, 80, 0, 112, 116, 0, 119, 119, 119, 0, 112, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 119, 0, 113, 1, 7, 0, 0, 0, 0, 21, 0, 81, 1, 1, 0, 0, 0, 0, 116, 0, 81, 1, 7, 0, 0, 0, 0, 84, 0, 85, 5, 5, 0, 0, 0, 0, 116, 0, 119, 7, 7, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0};
+
+int check = -1;
+int number = 0;
+int nColors;
+int nFrames;
+int height;
+int width;
+std_msgs::Float64 test;
+ros::Publisher p("/test", &test);
+
+void messageCb( const std_msgs::String& toggle_msg){
+
+  String message = (const char* )toggle_msg.data;
+ 
+  
+  int array = message.toInt();
+  if (array == 1){
+    check = 1;
+    width = array1[0];
+    height = array1[1];
+    nFrames = array1[2];
+    nColors = array1[3];
+    delayTime = 2/nColors;
+  }else{
+    check = 0;
+  }
+  
+}
+
+ros::Subscriber<std_msgs::String> sub("/arduino/led", messageCb );
+
+
+void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);  
+  digitalWrite(13,HIGH);
+  digitalWrite(13,LOW);
+  pinMode(latchPin, OUTPUT);
+  pinMode(clockPin, OUTPUT);
+  pinMode(dataPin, OUTPUT);
+  for(int i=0; i<7; i++){
+    digitalWrite(latchPin,LOW);
+    digitalWrite(latchPin,HIGH);
+  }
+  nh.initNode();
+  nh.subscribe(sub);
+  nh.advertise(p);
+
+    //open("/home/dennis/workspace/imageToHardware.txt");
+
+}
+
+
+
+
+void loop() {
+ nh.spinOnce();
+ if(check == 0{
+  clear();
+  check = -1;
+ }
+ if(check == 1){
+  for(int j = 0; j<nFrames;j++){
+    for(int k = 0; k<frameCycles; k++){  
+   
+      for(int i = 0; i<height*nColors*3*3; i=i+9){
+      
+        PORTB &= ~_BV(4);//digitalWrite(latchPin, LOW);
+        shiftOutFast(array1[i+4+j*height*nColors*3]);
+        shiftOutFast(array1[i+1+4+j*height*nColors*3]);
+        shiftOutFast(array1[i+2+4+j*height*nColors*3]);
+              shiftOutFast(array1[i+3+4+j*height*nColors*3]);
+        shiftOutFast(array1[i+4+4+j*height*nColors*3]);
+              shiftOutFast(array1[i+5+4+j*height*nColors*3]);
+        shiftOutFast(array1[i+6+4+j*height*nColors*3]);
+              shiftOutFast(array1[i+7+4+j*height*nColors*3]);
+        shiftOutFast(array1[i+8+4+j*height*nColors*3]);
+   
+        PORTB |= _BV(4);//digitalWrite(latchPin, HIGH);
+        delay(delayTime);
+      }
+    }
+  }
+ }
+ delay(1);
+}
+
+void clear(){
+  PORTB &= ~_BV(4);//digitalWrite(latchPin, LOW);
+  for(int i = 0; i < 10; i++){
+    shiftOutFast(0);
+  }
+  PORTB |= _BV(4);//digitalWrite(latchPin, HIGH);
+}
+
+void shiftOutFast(byte data){
+  for (byte mask = 00000001; mask>0; mask <<= 1) { //iterate through bit mask
+    if (data & mask){ // if bitwise AND resolves to true
+      PORTB |= _BV(2);//digitalWrite(dataPin, HIGH);
+      PORTB |= _BV(3);//digitalWrite(clockPin, HIGH);
+      PORTB &= ~_BV(3);//digitalWrite(latchPin, LOW);
+    }
+    else{ //if bitwise and resolves to false
+      PORTB &= ~_BV(2);//digitalWrite(dataPin, LOW);
+      PORTB |= _BV(3);//digitalWrite(clockPin, HIGH);
+      PORTB &= ~_BV(3);//digitalWrite(latchPin, LOW);
+    }
+  }
+}
+
+
+
+
+
+
+

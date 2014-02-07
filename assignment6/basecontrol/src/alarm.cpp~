@@ -1,0 +1,67 @@
+#include <ros/ros.h>
+#include <sensor_msgs/Joy.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Bool.h>
+#include <people_msgs/PositionMeasurement.h>
+#include <algorithm> 
+#include <sstream>
+using namespace std;
+
+class Alarm
+{
+public:
+  void peopleCallback(const std_msgs::Bool::ConstPtr& msg);
+  void alarmCallback(const people_msgs::PositionMeasurement::ConstPtr& msg);
+  void init();
+  void spin();
+  ros::NodeHandle nh_;
+  std_msgs::String s_;
+  
+  ros::Subscriber people_sub;
+  ros::Subscriber face_sub;
+  ros::Publisher arduinoComb_pub;
+  bool ppldet;
+};
+
+
+void Alarm::init(){
+  //haalt de data van beide joysticks en de r1 en r2 op
+  ppldet = false;
+  people_sub = nh_.subscribe<std_msgs::Bool>("visualinput", 10, &Alarm::peopleCallback, this);
+  arduinoComb_pub = nh_.advertise<std_msgs::String>("/arduino/comb", 1);
+  face_sub = nh_.subscribe<people_msgs::PositionMeasurement>("face_detector/people_tracker_measurements", 2, &Alarm::alarmCallback, this);
+}
+
+void Alarm::spin(){
+
+  ros::Rate loop_rate(10);
+
+  while(ros::ok()){
+    ros::spinOnce(); 
+    loop_rate.sleep();
+  }
+
+}
+
+//haalt de benodigde waarden uit joy en published het als een string.
+void Alarm::peopleCallback(const std_msgs::Bool::ConstPtr& msg){
+    ppldet= msg->data;
+}
+
+
+void Alarm::alarmCallback(const people_msgs::PositionMeasurement::ConstPtr& msg){
+  if(ppldet){
+    stringstream ac;
+    ac << "strobe" << " " << "alarm";
+    s_.data = ac.str();
+    arduinoComb_pub.publish(s_);
+  }
+}
+
+int main(int argc, char** argv)
+{
+  ros::init(argc, argv, "control");
+  Alarm control;
+  control.init();
+  control.spin();
+}

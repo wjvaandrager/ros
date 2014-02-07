@@ -1,0 +1,64 @@
+#ifndef __THREEMXL_BASEDOOR_H
+#define __THREEMXL_BASEDOOR_H
+
+#include <ros/ros.h>
+#include <CDxlGeneric.h>
+#include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/JointState.h>
+#include <sensor_msgs/PointCloud2.h>
+
+/// Usage example for CDynamixel and CDynamixelROS
+class DxlROSBaseDoor
+{
+
+  protected:
+    ros::NodeHandle nh_;   ///< ROS node handle
+    CDxlGeneric *motor1_;   ///< Motor interface
+    CDxlGeneric *motor2_;   ///< Motor interface
+    LxSerial serial_port_; ///< Serial port interface
+    
+     
+  public:
+    
+    ros::NodeHandle n;
+    ros::Publisher x_pub;
+    ros::Publisher y_pub;
+    ros::Publisher angle_pub;
+    ros::Publisher speed1_pub;
+    ros::Publisher speed2_pub;
+    
+    double xpos,ypos,ang;
+    /// Constructor
+    DxlROSBaseDoor() : nh_("~"), motor1_(NULL), motor2_(NULL){ }
+    /// Destructor
+    /** Delete motor interface, close serial port, and shut down node handle */
+    ~DxlROSBaseDoor()
+    {
+      if (motor1_)
+        delete motor1_;
+
+      if (motor2_)
+        delete motor2_;
+
+      if (serial_port_.is_port_open())
+        serial_port_.port_close();
+          
+      nh_.shutdown();
+    }
+    void turn(double angle);
+    void pos(double pos,double angle);
+    double distanceObjects(double count, double count1, double dist, double dist1);
+    double cosRuleLength(double l1,double l2,double angle);
+    double cosRuleAngle(double l1,double l2,double l3);
+    double distBase(double l1,double l2,double angle);
+    void doorCallback(const sensor_msgs::LaserScan::ConstPtr& msg);
+    
+    /// Initialize node
+    /** \param path path to shared_serial node */
+    void init(char *path);
+    void publishStates();
+    /// Spin
+    void spin();
+};    
+
+#endif /* __THREEMXL_BASEDOOR_H */

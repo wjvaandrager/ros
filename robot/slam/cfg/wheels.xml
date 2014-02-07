@@ -1,0 +1,14 @@
+<configuration>
+  <left>
+    <ID>106</ID>
+    <mxlmode comment="SPEED_MODE">1</mxlmode>
+    <gearboxratiomotor>46.7</gearboxratiomotor>
+    <acceleration>10</acceleration>
+  </left>
+  <right>
+    <ID>107</ID>
+    <mxlmode comment="SPEED_MODE">1</mxlmode>
+    <gearboxratiomotor>46.7</gearboxratiomotor>
+    <acceleration>10</acceleration>
+  </right>
+</configuration>

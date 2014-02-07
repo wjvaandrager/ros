@@ -1,0 +1,5 @@
+<launch>
+
+  <node pkg="rosbag" type="play" name="play" args="/home/pc_willem/ros/pos.bag"/>
+
+</launch>

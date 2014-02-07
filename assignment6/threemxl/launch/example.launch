@@ -1,0 +1,8 @@
+<launch>
+        <node name="threemxl_com" pkg="shared_serial" type="server" output="screen">
+                <param name="port_name" value="/dev/ttyUSB0"/>
+                <param name="port_type" value="RS485_FTDI"/>
+                <param name="baud_rate" value="115200"/>
+        </node>
+	<node name="dxl_ros_example" pkg="threemxl" type="example" args="threemxl_com" output="screen"/>
+</launch>

@@ -1,0 +1,56 @@
+#ifndef __THREEMXL_BASECONTROL_H
+#define __THREEMXL_BASECONTROL_H
+
+#include <ros/ros.h>
+#include <CDxlGeneric.h>
+#include <sensor_msgs/Joy.h>
+#include <sensor_msgs/JointState.h>
+
+/// Usage example for CDynamixel and CDynamixelROS
+class DxlROSBaseControl
+{
+
+  protected:
+    ros::NodeHandle nh_;   ///< ROS node handle
+    CDxlGeneric *motor1_;   ///< Motor interface
+    CDxlGeneric *motor2_;   ///< Motor interface
+    LxSerial serial_port_; ///< Serial port interface
+     
+  public:
+    
+    ros::NodeHandle n;
+    ros::Publisher speed1_pub;
+    ros::Publisher speed2_pub;
+    ros::Publisher pos1_pub;
+    ros::Publisher pos2_pub;
+    
+    /// Constructor
+    DxlROSBaseControl() : nh_("~"), motor1_(NULL), motor2_(NULL){ }
+    /// Destructor
+    /** Delete motor interface, close serial port, and shut down node handle */
+    ~DxlROSBaseControl()
+    {
+      if (motor1_)
+        delete motor1_;
+
+      if (motor2_)
+        delete motor2_;
+
+      if (serial_port_.is_port_open())
+        serial_port_.port_close();
+          
+      nh_.shutdown();
+    }
+
+    void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
+    /// Initialize node
+    /** \param path path to shared_serial node */
+    void init(char *path);
+    void publishStates();
+    void drive(double gas,double back,double angular);
+    void steer(double linear,double angular);
+    /// Spin
+    void spin();
+};    
+
+#endif /* __THREEMXL_BASECONTROL_H */

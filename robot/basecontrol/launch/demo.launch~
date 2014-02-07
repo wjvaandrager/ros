@@ -1,0 +1,16 @@
+<launch>
+  
+  <!-- Run the ps3controller -->
+  <include file="$(find basecontrol)/launch/control.launch" />
+
+  <!-- Run the arduino-->
+  <node pkg="rosserial_python" name="arduinoComb"  type="serial_node.py" args="/dev/ttyACM0"/> 
+  
+  <!-- Run the arduino-->
+  <node pkg="rosserial_python" name="arduinoLed"  type="serial_node.py" args="/dev/ttyACM1"/> 
+  
+  <!-- Run the movement of robot-->
+  <node pkg="threemxl" name="basecontrol2"  type="basecontrol2" />   
+  <node pkg="threemxl" name="facefollow"  type="facefollow"/ >   
+  
+</launch>
